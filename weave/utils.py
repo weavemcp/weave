@@ -1,4 +1,4 @@
-"""Utility functions for the SuperMCP setup agent"""
+"""Utility functions for the WeaveMCP setup agent"""
 
 import json
 import os
@@ -9,10 +9,10 @@ from urllib.parse import urljoin
 
 def open_token_page(base_url: str) -> str:
     """
-    Open the SuperMCP API token management page in the user's browser
+    Open the WeaveMCP API token management page in the user's browser
 
     Args:
-        base_url: Base URL of the SuperMCP instance
+        base_url: Base URL of the WeaveMCP instance
 
     Returns:
         The URL that was opened
@@ -29,8 +29,8 @@ def prompt_for_api_token() -> str:
     Returns:
         API token entered by user
     """
-    print("\nTo configure Claude Desktop with SuperMCP, you need an API token.")
-    print("1. Log in to SuperMCP in your browser")
+    print("\nTo configure Claude Desktop with WeaveMCP, you need an API token.")
+    print("1. Log in to WeaveMCP in your browser")
     print("2. Go to API Tokens in your profile settings")
     print(
         "3. Create a new token with 'read servers' and 'read organizations' permissions"
@@ -38,7 +38,7 @@ def prompt_for_api_token() -> str:
     print("4. Copy the token and paste it below")
     print()
 
-    token = input("Enter your SuperMCP API token: ").strip()
+    token = input("Enter your WeaveMCP API token: ").strip()
 
     if not token:
         raise ValueError("API token cannot be empty")
@@ -91,7 +91,7 @@ def validate_base_url(url: str) -> str:
 
 
 def save_config_cache(
-    config_data: Dict, cache_file: str = "~/.supermcp_cache.json"
+    config_data: Dict, cache_file: str = "~/.weavemcp_cache.json"
 ) -> None:
     """
     Save configuration data to cache file
@@ -110,7 +110,7 @@ def save_config_cache(
         pass
 
 
-def load_config_cache(cache_file: str = "~/.supermcp_cache.json") -> Optional[Dict]:
+def load_config_cache(cache_file: str = "~/.weavemcp_cache.json") -> Optional[Dict]:
     """
     Load configuration data from cache file
 
@@ -157,7 +157,7 @@ def get_auth_instructions(base_url: str) -> str:
     Get formatted instructions for obtaining an API token
 
     Args:
-        base_url: Base URL of SuperMCP instance
+        base_url: Base URL of WeaveMCP instance
 
     Returns:
         Formatted instructions string
@@ -165,10 +165,10 @@ def get_auth_instructions(base_url: str) -> str:
     token_url = urljoin(base_url, "/api-tokens/")
 
     return f"""
-To get your SuperMCP API token:
+To get your WeaveMCP API token:
 
 1. Open {base_url} in your browser
-2. Log in to your SuperMCP account
+2. Log in to your WeaveMCP account
 3. Go to {token_url}
 4. Click "Create New Token"
 5. Give it a name like "Claude Desktop Setup"

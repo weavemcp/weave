@@ -1,4 +1,4 @@
-"""SuperMCP API client for fetching virtual servers"""
+"""WeaveMCP API client for fetching virtual servers"""
 
 import json
 import requests
@@ -6,23 +6,23 @@ from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 
-class SuperMCPAPIError(Exception):
-    """Exception raised for SuperMCP API errors"""
+class WeaveMCPAPIError(Exception):
+    """Exception raised for WeaveMCP API errors"""
 
     pass
 
 
-class SuperMCPClient:
-    """Client for communicating with SuperMCP API"""
+class WeaveMCPClient:
+    """Client for communicating with WeaveMCP API"""
 
     def __init__(
-        self, base_url: str = "https://supermcp.dev", api_token: Optional[str] = None
+        self, base_url: str = "https://weavemcp.dev", api_token: Optional[str] = None
     ):
         """
-        Initialize the SuperMCP API client
+        Initialize the WeaveMCP API client
 
         Args:
-            base_url: Base URL of the SuperMCP instance
+            base_url: Base URL of the WeaveMCP instance
             api_token: Bearer token for API authentication
         """
         self.base_url = base_url.rstrip("/")
@@ -50,7 +50,7 @@ class SuperMCPClient:
             Dict containing organizations list and default organization
 
         Raises:
-            SuperMCPAPIError: If the API request fails
+            WeaveMCPAPIError: If the API request fails
         """
         url = urljoin(self.base_url, "/api/user/organizations/")
 
@@ -60,16 +60,16 @@ class SuperMCPClient:
             data = response.json()
 
             if not data.get("success"):
-                raise SuperMCPAPIError(
+                raise WeaveMCPAPIError(
                     f"API error: {data.get('error', 'Unknown error')}"
                 )
 
             return data
 
         except requests.RequestException as e:
-            raise SuperMCPAPIError(f"Failed to fetch organizations: {e}")
+            raise WeaveMCPAPIError(f"Failed to fetch organizations: {e}")
         except json.JSONDecodeError as e:
-            raise SuperMCPAPIError(f"Invalid JSON response: {e}")
+            raise WeaveMCPAPIError(f"Invalid JSON response: {e}")
 
     def get_default_virtual_server(self) -> Dict:
         """
@@ -79,7 +79,7 @@ class SuperMCPClient:
             Dict containing virtual server details and downstream servers
 
         Raises:
-            SuperMCPAPIError: If the API request fails or no server found
+            WeaveMCPAPIError: If the API request fails or no server found
         """
         url = urljoin(self.base_url, "/api/user/default-server/")
 
@@ -89,20 +89,20 @@ class SuperMCPClient:
             data = response.json()
 
             if not data.get("success"):
-                raise SuperMCPAPIError(
+                raise WeaveMCPAPIError(
                     f"API error: {data.get('error', 'Unknown error')}"
                 )
 
             return data
 
         except requests.RequestException as e:
-            raise SuperMCPAPIError(f"Failed to fetch default server: {e}")
+            raise WeaveMCPAPIError(f"Failed to fetch default server: {e}")
         except json.JSONDecodeError as e:
-            raise SuperMCPAPIError(f"Invalid JSON response: {e}")
+            raise WeaveMCPAPIError(f"Invalid JSON response: {e}")
 
     def test_connection(self) -> Tuple[bool, Optional[str]]:
         """
-        Test if the client can successfully connect to SuperMCP
+        Test if the client can successfully connect to WeaveMCP
 
         Returns:
             Tuple of (success: bool, error_message: Optional[str])
@@ -111,7 +111,7 @@ class SuperMCPClient:
             # Try to get organizations as a simple connectivity test
             data = self.get_user_organizations()
             return True, None
-        except SuperMCPAPIError as e:
+        except WeaveMCPAPIError as e:
             return False, str(e)
         except Exception as e:
             return False, f"Unexpected error: {e}"
@@ -131,14 +131,14 @@ class SuperMCPClient:
                 return None
 
             return {
-                "name": f"supermcp-{server['organization']['slug']}",
+                "name": f"weavemcp-{server['organization']['slug']}",
                 "endpoint_url": server["endpoint_url"],
                 "access_token": server["access_token"],
                 "server_id": server["id"],
                 "organization": server["organization"]["slug"],
-                "description": f"SuperMCP virtual server for {server['organization']['name']}",
+                "description": f"WeaveMCP virtual server for {server['organization']['name']}",
                 "downstream_count": len(server.get("downstream_servers", [])),
             }
 
-        except SuperMCPAPIError:
+        except WeaveMCPAPIError:
             return None

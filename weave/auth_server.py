@@ -37,7 +37,7 @@ class AuthCallbackHandler(BaseHTTPRequestHandler):
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>SuperMCP CLI - Authentication Success</title>
+                    <title>WeaveMCP CLI - Authentication Success</title>
                     <style>
                         body {{ font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }}
                         .container {{ max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
@@ -50,11 +50,11 @@ class AuthCallbackHandler(BaseHTTPRequestHandler):
                 <body>
                     <div class="container">
                         <h1>Authentication Successful!</h1>
-                        <p>Your SuperMCP CLI has been successfully configured.</p>
+                        <p>Your WeaveMCP CLI has been successfully configured.</p>
                         <p>Server: <strong>{server_url}</strong></p>
                         <div class="close-note">
                             <strong>You can now close this browser tab</strong><br>
-                            Return to your terminal to continue using the SuperMCP CLI.
+                            Return to your terminal to continue using the WeaveMCP CLI.
                         </div>
                     </div>
                 </body>
@@ -72,7 +72,7 @@ class AuthCallbackHandler(BaseHTTPRequestHandler):
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>SuperMCP CLI - Authentication Error</title>
+                    <title>WeaveMCP CLI - Authentication Error</title>
                     <style>
                         body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
                         .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }

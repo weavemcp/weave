@@ -97,9 +97,9 @@ class ClaudeConfigManager:
         config = self._read_config()
         return config.get("mcpServers", {})
 
-    def has_supermcp_server(self, organization_slug: str) -> bool:
+    def has_weavemcp_server(self, organization_slug: str) -> bool:
         """
-        Check if a SuperMCP server for the given organization already exists
+        Check if a WeaveMCP server for the given organization already exists
 
         Args:
             organization_slug: Organization slug to check for
@@ -108,12 +108,12 @@ class ClaudeConfigManager:
             True if server exists, False otherwise
         """
         servers = self.get_existing_servers()
-        server_name = f"supermcp-{organization_slug}"
+        server_name = f"weavemcp-{organization_slug}"
         return server_name in servers
 
-    def add_supermcp_server(self, connection_details: Dict) -> bool:
+    def add_weavemcp_server(self, connection_details: Dict) -> bool:
         """
-        Add a SuperMCP server to Claude Desktop configuration
+        Add a WeaveMCP server to Claude Desktop configuration
 
         Args:
             connection_details: Server connection details from API
@@ -124,13 +124,13 @@ class ClaudeConfigManager:
         server_name = connection_details["name"]
 
         # Check if server already exists
-        if self.has_supermcp_server(connection_details["organization"]):
+        if self.has_weavemcp_server(connection_details["organization"]):
             return False
 
         config = self._read_config()
 
         # Create server configuration for Claude Desktop
-        # SuperMCP servers now use the weave proxy command
+        # WeaveMCP servers now use the weave proxy command
         config["mcpServers"][server_name] = {
             "command": "weave",
             "args": ["proxy"],
@@ -142,9 +142,9 @@ class ClaudeConfigManager:
         except ClaudeConfigError:
             raise
 
-    def remove_supermcp_server(self, organization_slug: str) -> bool:
+    def remove_weavemcp_server(self, organization_slug: str) -> bool:
         """
-        Remove a SuperMCP server from Claude Desktop configuration
+        Remove a WeaveMCP server from Claude Desktop configuration
 
         Args:
             organization_slug: Organization slug to remove
@@ -152,7 +152,7 @@ class ClaudeConfigManager:
         Returns:
             True if server was removed, False if it didn't exist
         """
-        server_name = f"supermcp-{organization_slug}"
+        server_name = f"weavemcp-{organization_slug}"
 
         config = self._read_config()
 
@@ -167,9 +167,9 @@ class ClaudeConfigManager:
         except ClaudeConfigError:
             raise
 
-    def update_supermcp_server(self, connection_details: Dict) -> bool:
+    def update_weavemcp_server(self, connection_details: Dict) -> bool:
         """
-        Update an existing SuperMCP server configuration
+        Update an existing WeaveMCP server configuration
 
         Args:
             connection_details: Updated server connection details
@@ -182,7 +182,7 @@ class ClaudeConfigManager:
         config = self._read_config()
         
         # Update server configuration for Claude Desktop
-        # SuperMCP servers now use the weave proxy command
+        # WeaveMCP servers now use the weave proxy command
         config["mcpServers"][server_name] = {
             "command": "weave",
             "args": ["proxy"],
@@ -194,15 +194,15 @@ class ClaudeConfigManager:
         except ClaudeConfigError:
             raise
 
-    def list_supermcp_servers(self) -> List[str]:
+    def list_weavemcp_servers(self) -> List[str]:
         """
-        Get list of SuperMCP server names in the configuration
+        Get list of WeaveMCP server names in the configuration
 
         Returns:
-            List of SuperMCP server names
+            List of WeaveMCP server names
         """
         servers = self.get_existing_servers()
-        return [name for name in servers.keys() if name.startswith("supermcp-")]
+        return [name for name in servers.keys() if name.startswith("weavemcp-")]
 
     def get_config_info(self) -> Dict:
         """
@@ -212,12 +212,12 @@ class ClaudeConfigManager:
             Dict with config file path, backup info, and server counts
         """
         existing_servers = self.get_existing_servers()
-        supermcp_servers = self.list_supermcp_servers()
+        weavemcp_servers = self.list_weavemcp_servers()
 
         return {
             "config_path": self.config_path,
             "config_exists": os.path.exists(self.config_path),
             "total_servers": len(existing_servers),
-            "supermcp_servers": len(supermcp_servers),
-            "supermcp_server_names": supermcp_servers,
+            "weavemcp_servers": len(weavemcp_servers),
+            "weavemcp_server_names": weavemcp_servers,
         }

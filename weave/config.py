@@ -1,4 +1,4 @@
-"""Configuration management for SuperMCP CLI"""
+"""Configuration management for WeaveMCP CLI"""
 
 import json
 import os
@@ -12,8 +12,8 @@ class ConfigError(Exception):
     pass
 
 
-class SuperMCPConfig:
-    """Manager for SuperMCP CLI configuration"""
+class WeaveMCPConfig:
+    """Manager for WeaveMCP CLI configuration"""
 
     def __init__(self, config_path: Optional[str] = None):
         """

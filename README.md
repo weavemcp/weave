@@ -160,7 +160,7 @@ After running `weave setup`, your Claude Desktop configuration will include:
 ```json
 {
   "mcpServers": {
-    "supermcp-yourorg": {
+    "weavemcp-yourorg": {
       "command": "weave",
       "args": ["proxy"]
     }

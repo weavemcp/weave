@@ -5,8 +5,8 @@ build-backend = "hatchling.build"
 [project]
 name = "weave"
 version = "0.1.0"
-description = "Setup agent for automatically configuring Claude Desktop with SuperMCP virtual servers"
-authors = [{name = "SuperMCP", email = "support@supermcp.dev"}]
+description = "Setup agent for automatically configuring Claude Desktop with WeaveMCP virtual servers"
+authors = [{name = "WeaveMCP", email = "support@weavemcp.dev"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,9 +26,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/supermcp/supermcp"
-Repository = "https://github.com/supermcp/supermcp"
-Documentation = "https://docs.supermcp.dev"
+Homepage = "https://github.com/weavemcp/weavemcp"
+Repository = "https://github.com/weavemcp/weavemcp"
+Documentation = "https://docs.weavemcp.dev"
 
 [project.scripts]
 weave = "weave.cli:main"

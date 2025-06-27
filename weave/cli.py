@@ -7,9 +7,9 @@ import time
 import asyncio
 from typing import Optional
 
-from .api_client import SuperMCPClient, SuperMCPAPIError
+from .api_client import WeaveMCPClient, WeaveMCPAPIError
 from .claude_config import ClaudeConfigManager, ClaudeConfigError
-from .config import SuperMCPConfig, ConfigError
+from .config import WeaveMCPConfig, ConfigError
 from .auth_server import AuthServer
 from .mcp_proxy import MCPProxyError
 from .proxy_server import run_proxy_server
@@ -26,7 +26,7 @@ from .utils import (
 @click.group()
 @click.version_option(version="0.1.0")
 def main():
-    """Weave - Configure Claude Desktop with your SuperMCP servers"""
+    """Weave - Configure Claude Desktop with your WeaveMCP servers"""
     pass
 
 
@@ -34,7 +34,7 @@ def main():
 @click.option(
     "--server-url",
     default="https://weavemcp.com",
-    help="SuperMCP server URL (default: https://weavemcp.com)",
+    help="WeaveMCP server URL (default: https://weavemcp.com)",
 )
 @click.option(
     "--alias", default="default", help="Server alias to save as (default: default)"
@@ -45,15 +45,15 @@ def main():
     help="Don't open browser automatically (manual token entry)",
 )
 def login(server_url: str, alias: str, no_browser: bool):
-    """Log in to SuperMCP and save authentication token"""
+    """Log in to WeaveMCP and save authentication token"""
 
     try:
         # Initialize config manager
-        config = SuperMCPConfig()
+        config = WeaveMCPConfig()
 
         # Validate and normalize server URL
         server_url = validate_base_url(server_url)
-        click.echo(f"Logging in to SuperMCP at: {server_url}")
+        click.echo(f"Logging in to WeaveMCP at: {server_url}")
 
         if no_browser:
             # Manual token entry mode
@@ -65,7 +65,7 @@ def login(server_url: str, alias: str, no_browser: bool):
                 sys.exit(1)
 
             # Test the token
-            client = SuperMCPClient(server_url, token)
+            client = WeaveMCPClient(server_url, token)
             success, error = client.test_connection()
 
             if not success:
@@ -119,12 +119,12 @@ def login(server_url: str, alias: str, no_browser: bool):
                         click.echo(f"✅ Successfully logged in and saved as '{alias}'")
 
                         # Test the connection
-                        client = SuperMCPClient(server_url, token)
+                        client = WeaveMCPClient(server_url, token)
                         try:
                             server_data = client.get_default_virtual_server()
                             server = server_data["server"]
                             click.echo(f"🎯 Connected to server: {server['name']}")
-                        except SuperMCPAPIError:
+                        except WeaveMCPAPIError:
                             click.echo(
                                 "ℹ️  Token saved (server connection will be tested during setup)"
                             )
@@ -155,7 +155,7 @@ def _get_auth_config(
     server_alias: Optional[str] = None,
 ):
     """Get authentication configuration, preferring saved config"""
-    config = SuperMCPConfig()
+    config = WeaveMCPConfig()
 
     if server_alias:
         # Use specific server alias
@@ -200,7 +200,7 @@ def _get_auth_config(
 
 @main.command()
 @click.option(
-    "--server-url", help="SuperMCP server URL (uses saved config if not provided)"
+    "--server-url", help="WeaveMCP server URL (uses saved config if not provided)"
 )
 @click.option(
     "--token", help="API token for authentication (uses saved token if not provided)"
@@ -220,7 +220,7 @@ def setup(
     config_path: Optional[str],
     dry_run: bool,
 ):
-    """Set up Claude Desktop with your default SuperMCP virtual server"""
+    """Set up Claude Desktop with your default WeaveMCP virtual server"""
 
     try:
         # Get authentication configuration
@@ -231,19 +231,19 @@ def setup(
             click.echo("💡 Use 'weave login' to authenticate first")
             sys.exit(1)
 
-        click.echo(f"🔗 Connecting to SuperMCP at: {server_url}")
+        click.echo(f"🔗 Connecting to WeaveMCP at: {server_url}")
 
         # Initialize API client
-        client = SuperMCPClient(server_url, token)
+        client = WeaveMCPClient(server_url, token)
 
         # Test connection
-        click.echo("Testing connection to SuperMCP...")
+        click.echo("Testing connection to WeaveMCP...")
         success, error = client.test_connection()
         if not success:
-            click.echo(f"❌ Failed to connect to SuperMCP: {error}", err=True)
+            click.echo(f"❌ Failed to connect to WeaveMCP: {error}", err=True)
             sys.exit(1)
 
-        click.echo("✅ Connected to SuperMCP successfully")
+        click.echo("✅ Connected to WeaveMCP successfully")
 
         # Get server details
         click.echo("Fetching your default virtual server...")
@@ -252,7 +252,7 @@ def setup(
         if not connection_details:
             click.echo("❌ No default virtual server found.", err=True)
             click.echo(
-                "Please create a virtual server in the SuperMCP dashboard first."
+                "Please create a virtual server in the WeaveMCP dashboard first."
             )
             sys.exit(1)
 
@@ -265,14 +265,14 @@ def setup(
 
         click.echo(f"Claude Desktop config: {config_info['config_path']}")
         click.echo(f"Existing servers: {config_info['total_servers']}")
-        click.echo(f"Existing SuperMCP servers: {config_info['supermcp_servers']}")
+        click.echo(f"Existing WeaveMCP servers: {config_info['weavemcp_servers']}")
 
         if dry_run:
             click.echo("\n🔍 DRY RUN MODE - No changes will be made")
-            if config_manager.has_supermcp_server(connection_details["organization"]):
-                click.echo("Would update existing SuperMCP server configuration")
+            if config_manager.has_weavemcp_server(connection_details["organization"]):
+                click.echo("Would update existing WeaveMCP server configuration")
             else:
-                click.echo("Would add new SuperMCP server to Claude Desktop")
+                click.echo("Would add new WeaveMCP server to Claude Desktop")
             return
 
         # Create backup
@@ -281,21 +281,21 @@ def setup(
             click.echo(f"📋 Created backup: {backup_path}")
 
         # Add or update server
-        if config_manager.has_supermcp_server(connection_details["organization"]):
-            click.echo("Updating existing SuperMCP server...")
-            config_manager.update_supermcp_server(connection_details)
-            click.echo("✅ Updated SuperMCP server configuration")
+        if config_manager.has_weavemcp_server(connection_details["organization"]):
+            click.echo("Updating existing WeaveMCP server...")
+            config_manager.update_weavemcp_server(connection_details)
+            click.echo("✅ Updated WeaveMCP server configuration")
         else:
-            click.echo("Adding SuperMCP server to Claude Desktop...")
-            config_manager.add_supermcp_server(connection_details)
-            click.echo("✅ Added SuperMCP server to Claude Desktop")
+            click.echo("Adding WeaveMCP server to Claude Desktop...")
+            config_manager.add_weavemcp_server(connection_details)
+            click.echo("✅ Added WeaveMCP server to Claude Desktop")
 
         click.echo("\n🎉 Setup complete!")
-        click.echo("Your SuperMCP server is now configured to use the built-in proxy.")
-        click.echo("Restart Claude Desktop to use your SuperMCP server.")
+        click.echo("Your WeaveMCP server is now configured to use the built-in proxy.")
+        click.echo("Restart Claude Desktop to use your WeaveMCP server.")
 
-    except SuperMCPAPIError as e:
-        click.echo(f"❌ SuperMCP API error: {e}", err=True)
+    except WeaveMCPAPIError as e:
+        click.echo(f"❌ WeaveMCP API error: {e}", err=True)
         sys.exit(1)
     except ClaudeConfigError as e:
         click.echo(f"❌ Claude Desktop config error: {e}", err=True)
@@ -320,11 +320,11 @@ def status(config_path: Optional[str]):
         click.echo(f"Claude Desktop Config: {config_info['config_path']}")
         click.echo(f"Config exists: {'✅' if config_info['config_exists'] else '❌'}")
         click.echo(f"Total MCP servers: {config_info['total_servers']}")
-        click.echo(f"SuperMCP servers: {config_info['supermcp_servers']}")
+        click.echo(f"WeaveMCP servers: {config_info['weavemcp_servers']}")
 
-        if config_info["supermcp_server_names"]:
-            click.echo("\nSuperMCP servers:")
-            for server_name in config_info["supermcp_server_names"]:
+        if config_info["weavemcp_server_names"]:
+            click.echo("\nWeaveMCP servers:")
+            for server_name in config_info["weavemcp_server_names"]:
                 click.echo(f"  • {server_name}")
 
     except ClaudeConfigError as e:
@@ -335,14 +335,14 @@ def status(config_path: Optional[str]):
 @main.command()
 @click.option(
     "--server-url",
-    default="https://supermcp.dev",
-    help="SuperMCP server URL (default: https://supermcp.dev)",
+    default="https://weavemcp.dev",
+    help="WeaveMCP server URL (default: https://weavemcp.dev)",
 )
 @click.option(
     "--token", help="API token for authentication (if not provided, will prompt)"
 )
 def test(server_url: str, token: Optional[str]):
-    """Test connection to SuperMCP API"""
+    """Test connection to WeaveMCP API"""
 
     try:
         server_url = validate_base_url(server_url)
@@ -354,7 +354,7 @@ def test(server_url: str, token: Optional[str]):
             click.echo("❌ Invalid token format", err=True)
             sys.exit(1)
 
-        client = SuperMCPClient(server_url, token)
+        client = WeaveMCPClient(server_url, token)
 
         click.echo("Testing connection...")
         success, error = client.test_connection()
@@ -371,7 +371,7 @@ def test(server_url: str, token: Optional[str]):
                 server = server_data["server"]
                 click.echo(f"✅ Found default server: {server['name']}")
 
-            except SuperMCPAPIError as e:
+            except WeaveMCPAPIError as e:
                 click.echo(f"⚠️  API test failed: {e}")
         else:
             click.echo(f"❌ Connection failed: {error}", err=True)
@@ -391,38 +391,38 @@ def test(server_url: str, token: Optional[str]):
     "--config-path",
     help="Path to Claude Desktop config file (auto-detected if not provided)",
 )
-@click.option("--all", "remove_all", is_flag=True, help="Remove all SuperMCP servers")
+@click.option("--all", "remove_all", is_flag=True, help="Remove all WeaveMCP servers")
 def remove(organization: Optional[str], config_path: Optional[str], remove_all: bool):
-    """Remove SuperMCP servers from Claude Desktop configuration"""
+    """Remove WeaveMCP servers from Claude Desktop configuration"""
 
     try:
         config_manager = ClaudeConfigManager(config_path)
-        supermcp_servers = config_manager.list_supermcp_servers()
+        weavemcp_servers = config_manager.list_weavemcp_servers()
 
-        if not supermcp_servers:
-            click.echo("No SuperMCP servers found in configuration")
+        if not weavemcp_servers:
+            click.echo("No WeaveMCP servers found in configuration")
             return
 
         if remove_all:
-            if click.confirm(f"Remove all {len(supermcp_servers)} SuperMCP servers?"):
-                for server_name in supermcp_servers:
-                    org_slug = server_name.replace("supermcp-", "")
-                    config_manager.remove_supermcp_server(org_slug)
-                click.echo(f"✅ Removed {len(supermcp_servers)} SuperMCP servers")
+            if click.confirm(f"Remove all {len(weavemcp_servers)} WeaveMCP servers?"):
+                for server_name in weavemcp_servers:
+                    org_slug = server_name.replace("weavemcp-", "")
+                    config_manager.remove_weavemcp_server(org_slug)
+                click.echo(f"✅ Removed {len(weavemcp_servers)} WeaveMCP servers")
             return
 
         if not organization:
-            click.echo("SuperMCP servers in configuration:")
-            for server_name in supermcp_servers:
-                org_slug = server_name.replace("supermcp-", "")
+            click.echo("WeaveMCP servers in configuration:")
+            for server_name in weavemcp_servers:
+                org_slug = server_name.replace("weavemcp-", "")
                 click.echo(f"  • {org_slug}")
             click.echo("\nUse --organization <slug> to remove a specific server")
             return
 
-        if config_manager.remove_supermcp_server(organization):
-            click.echo(f"✅ Removed SuperMCP server for organization: {organization}")
+        if config_manager.remove_weavemcp_server(organization):
+            click.echo(f"✅ Removed WeaveMCP server for organization: {organization}")
         else:
-            click.echo(f"❌ No SuperMCP server found for organization: {organization}")
+            click.echo(f"❌ No WeaveMCP server found for organization: {organization}")
 
     except ClaudeConfigError as e:
         click.echo(f"❌ Config error: {e}", err=True)
@@ -438,25 +438,25 @@ def remove(organization: Optional[str], config_path: Optional[str], remove_all: 
     "--dry-run", is_flag=True, help="Show what would be updated without making changes"
 )
 def upgrade(config_path: Optional[str], dry_run: bool):
-    """Upgrade existing SuperMCP servers to use the new built-in proxy"""
+    """Upgrade existing WeaveMCP servers to use the new built-in proxy"""
     
     try:
         config_manager = ClaudeConfigManager(config_path)
         config = config_manager._read_config()
-        supermcp_servers = config_manager.list_supermcp_servers()
+        weavemcp_servers = config_manager.list_weavemcp_servers()
         
-        if not supermcp_servers:
-            click.echo("No SuperMCP servers found in configuration")
+        if not weavemcp_servers:
+            click.echo("No WeaveMCP servers found in configuration")
             return
         
         updated_count = 0
-        for server_name in supermcp_servers:
+        for server_name in weavemcp_servers:
             server_config = config["mcpServers"].get(server_name, {})
             
-            # Check if this server is using old methods (npx or supermcp-setup)
+            # Check if this server is using old methods (npx or weavemcp-setup)
             if ((server_config.get("command") == "npx" and 
                 "@modelcontextprotocol/server-proxy" in server_config.get("args", [])) or
-                server_config.get("command") == "supermcp-setup"):
+                server_config.get("command") == "weavemcp-setup"):
                 
                 updated_count += 1
                 if dry_run:
@@ -480,10 +480,10 @@ def upgrade(config_path: Optional[str], dry_run: bool):
             
             # Write updated config
             config_manager._write_config(config)
-            click.echo(f"✅ Updated {updated_count} SuperMCP servers to use built-in proxy")
+            click.echo(f"✅ Updated {updated_count} WeaveMCP servers to use built-in proxy")
             click.echo("Restart Claude Desktop to use the updated configuration.")
         else:
-            click.echo("All SuperMCP servers are already using the latest configuration")
+            click.echo("All WeaveMCP servers are already using the latest configuration")
     
     except ClaudeConfigError as e:
         click.echo(f"❌ Config error: {e}", err=True)
@@ -492,22 +492,22 @@ def upgrade(config_path: Optional[str], dry_run: bool):
 
 @main.group()
 def server():
-    """Manage SuperMCP server configurations"""
+    """Manage WeaveMCP server configurations"""
     pass
 
 
 @server.command("list")
 def server_list():
-    """List configured SuperMCP servers"""
+    """List configured WeaveMCP servers"""
     try:
-        config = SuperMCPConfig()
+        config = WeaveMCPConfig()
         servers = config.list_servers()
 
         if not servers:
             click.echo("No servers configured. Use 'login' command to add a server.")
             return
 
-        click.echo("Configured SuperMCP servers:")
+        click.echo("Configured WeaveMCP servers:")
         click.echo()
 
         for server_config in servers:
@@ -529,7 +529,7 @@ def server_list():
 def server_switch(alias: str):
     """Switch to a different server configuration"""
     try:
-        config = SuperMCPConfig()
+        config = WeaveMCPConfig()
         config.set_current_server(alias)
         click.echo(f"✅ Switched to server: {alias}")
 
@@ -544,7 +544,7 @@ def server_switch(alias: str):
 def server_remove(alias: str, force: bool):
     """Remove a server configuration"""
     try:
-        config = SuperMCPConfig()
+        config = WeaveMCPConfig()
 
         if not force:
             servers = config.list_servers()
@@ -578,7 +578,7 @@ def server_remove(alias: str, force: bool):
 def server_add(alias: str, url: str):
     """Add a new server configuration (without token)"""
     try:
-        config = SuperMCPConfig()
+        config = WeaveMCPConfig()
         config.add_server(alias, url)
         click.echo(f"✅ Added server '{alias}' at {url}")
         click.echo(f"💡 Use 'weave login --alias {alias}' to authenticate")
@@ -590,7 +590,7 @@ def server_add(alias: str, url: str):
 
 @main.command()
 @click.option(
-    "--server-url", help="SuperMCP server URL (uses saved config if not provided)"
+    "--server-url", help="WeaveMCP server URL (uses saved config if not provided)"
 )
 @click.option(
     "--token", help="API token for authentication (uses saved token if not provided)"
@@ -610,12 +610,12 @@ def proxy(
     verbose: bool,
     log_file: Optional[str]
 ):
-    """Start STDIO proxy server for SuperMCP virtual servers"""
+    """Start STDIO proxy server for WeaveMCP virtual servers"""
     
     def ensure_authenticated():
         """Ensure user is authenticated, trigger login if needed"""
         try:
-            config = SuperMCPConfig()
+            config = WeaveMCPConfig()
             current_server = config.get_current_server()
             
             if not current_server["token"]:

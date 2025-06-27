@@ -30,7 +30,7 @@ class ProxyServer:
     
     def _setup_logging(self) -> logging.Logger:
         """Setup logging for proxy server"""
-        logger = logging.getLogger('supermcp.proxy.server')
+        logger = logging.getLogger('weavemcp.proxy.server')
         
         # Avoid duplicate handlers
         if logger.handlers:
@@ -57,7 +57,7 @@ class ProxyServer:
             MCPProxyError: If proxy server fails to start
         """
         try:
-            self._logger.info("Starting SuperMCP STDIO proxy server...")
+            self._logger.info("Starting WeaveMCP STDIO proxy server...")
             
             # Create FastMCP client with HTTP transport
             mcp_client = await self.proxy_client.create_client()
@@ -65,7 +65,7 @@ class ProxyServer:
             # Create proxy server using FastMCP.as_proxy()
             self._proxy_server = FastMCP.as_proxy(
                 mcp_client,
-                name="SuperMCP STDIO Proxy"
+                name="WeaveMCP STDIO Proxy"
             )
             
             self._logger.info("Created FastMCP proxy server")

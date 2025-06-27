@@ -8,8 +8,8 @@ from pathlib import Path
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
-from .api_client import SuperMCPClient, SuperMCPAPIError
-from .config import SuperMCPConfig, ConfigError
+from .api_client import WeaveMCPClient, WeaveMCPAPIError
+from .config import WeaveMCPConfig, ConfigError
 
 
 class MCPProxyError(Exception):
@@ -55,7 +55,7 @@ class MCPProxyClient:
     
     def _setup_logging(self) -> logging.Logger:
         """Setup logging for proxy operations"""
-        logger = logging.getLogger('supermcp.proxy')
+        logger = logging.getLogger('weavemcp.proxy')
         
         # Avoid duplicate handlers
         if logger.handlers:
@@ -136,7 +136,7 @@ async def get_proxy_client(
     """
     try:
         # Get authentication configuration
-        config = SuperMCPConfig()
+        config = WeaveMCPConfig()
         
         if server_alias:
             servers = config.list_servers()
@@ -157,8 +157,8 @@ async def get_proxy_client(
         if not token:
             raise MCPProxyError("No authentication token found. Run 'weave login' first.")
         
-        # Get proxy endpoint from SuperMCP API
-        client = SuperMCPClient(server_url, token)
+        # Get proxy endpoint from WeaveMCP API
+        client = WeaveMCPClient(server_url, token)
         connection_details = client.get_server_connection_details()
         
         if not connection_details:
@@ -172,7 +172,7 @@ async def get_proxy_client(
         
         return proxy_client
         
-    except SuperMCPAPIError as e:
+    except WeaveMCPAPIError as e:
         if "404" in str(e) or "not found" in str(e).lower():
             raise MCPProxyError("No default virtual server found. Run 'weave setup' first.")
         elif "401" in str(e) or "unauthorized" in str(e).lower():
@@ -180,7 +180,7 @@ async def get_proxy_client(
         elif "403" in str(e) or "forbidden" in str(e).lower():
             raise MCPProxyError("Access denied. Check your permissions or run 'weave login' again.")
         else:
-            raise MCPProxyError(f"SuperMCP API error: {e}")
+            raise MCPProxyError(f"WeaveMCP API error: {e}")
     except ConfigError as e:
         raise MCPProxyError(f"Configuration error: {e}")
     except Exception as e:
