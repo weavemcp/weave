@@ -38,6 +38,16 @@ For more installation options, see the [UV installation guide](https://docs.astr
 No installation required! Use `uvx` to run Weave directly:
 
 ```bash
+uv tool install git+https://github.com/weavemcp/weave
+```
+
+Or install for easier access:
+```bash
+uv tool install git+https://github.com/weavemcp/weave
+weave 
+```
+
+```bash
 # Login to SuperMCP
 uvx weave login
 
