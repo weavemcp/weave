@@ -38,7 +38,7 @@ For more installation options, see the [UV installation guide](https://docs.astr
 No installation required! Use `uvx` to run Weave directly:
 
 ```bash
-uv tool install git+https://github.com/weavemcp/weave
+uvx --from git+https://github.com/weavemcp/weave weave
 ```
 
 Or install for easier access:
@@ -47,15 +47,17 @@ uv tool install git+https://github.com/weavemcp/weave
 weave 
 ```
 
+The below commands will work with either command, but we recommend using `uvx install` for ease of use, and the below commands assume installation via `uvx install`.
+
 ```bash
 # Login to SuperMCP
-uvx weave login
+weave login
 
 # Configure Claude Desktop
-uvx weave setup
+weave setup
 
 # Check status
-uvx weave status
+weave status
 ```
 
 ## Commands
@@ -64,68 +66,68 @@ uvx weave status
 
 ```bash
 # Login to SuperMCP (opens browser for OAuth)
-uvx weave login
+weave login
 
 # Login with manual token entry
-uvx weave login --no-browser
+weave login --no-browser
 
 # Login to specific server
-uvx weave login --server-url https://your-server.com
+weave login --server-url https://your-server.com
 ```
 
 ### Setup & Configuration
 
 ```bash
 # Set up Claude Desktop with your default SuperMCP server
-uvx weave setup
+weave setup
 
 # Preview setup changes without applying them
-uvx weave setup --dry-run
+weave setup --dry-run
 
 # Check current configuration
-uvx weave status
+weave status
 ```
 
 ### Proxy Server
 
 ```bash
 # Start STDIO proxy server (used internally by Claude Desktop)
-uvx weave proxy
+weave proxy
 
 # Start proxy with verbose logging
-uvx weave proxy --verbose
+weave proxy --verbose
 ```
 
 ### Management
 
 ```bash
 # Upgrade existing MCP servers to use Weave
-uvx weave upgrade
+weave upgrade
 
 # Preview upgrade changes
-uvx weave upgrade --dry-run
+weave upgrade --dry-run
 
 # Remove SuperMCP servers from Claude Desktop
-uvx weave remove --organization myorg
+weave remove --organization myorg
 
 # Remove all SuperMCP servers
-uvx weave remove --all
+weave remove --all
 ```
 
 ### Server Management
 
 ```bash
 # List configured servers
-uvx weave server list
+weave server list
 
 # Switch to different server
-uvx weave server switch staging
+weave server switch staging
 
 # Add server without token
-uvx weave server add production https://prod.weavemcp.com
+weave server add production https://prod.weavemcp.com
 
 # Remove server configuration
-uvx weave server remove staging
+weave server remove staging
 ```
 
 ## How It Works
@@ -172,7 +174,7 @@ After running `weave setup`, your Claude Desktop configuration will include:
 
 **"No authentication found"**
 ```bash
-uvx weave login
+weave login
 ```
 
 **"No default virtual server found"**  
@@ -190,19 +192,19 @@ uvx weave login
 Run any command with `--verbose` for detailed logging:
 
 ```bash
-uvx weave proxy --verbose
-uvx weave setup --verbose
+weave proxy --verbose
+weave setup --verbose
 ```
 
 ### Getting Help
 
 ```bash
 # General help
-uvx weave --help
+weave --help
 
 # Command-specific help
-uvx weave setup --help
-uvx weave proxy --help
+weave setup --help
+weave proxy --help
 ```
 
 ## Development
@@ -239,8 +241,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 - **Documentation**: [docs.weavemcp.com](https://docs.weavemcp.com)
 - **Issues**: [GitHub Issues](https://github.com/weavemcp/weave/issues)
-- **Community**: [SuperMCP Discord](https://discord.gg/supermcp)
 
 ---
 
-Made with ❤️ by the [SuperMCP](https://weavemcp.com) team
+Made with ❤️ by the [IronPress Apps](https://ironpressapps.com) team
