@@ -1,15 +1,15 @@
 # Weave
 
-**Weave** is a command-line tool that seamlessly connects [Claude Desktop](https://claude.ai/download) to [SuperMCP](https://weavemcp.com) virtual servers, enabling you to use multiple MCP (Model Context Protocol) servers through a single, unified interface.
+**Weave** is a command-line tool that seamlessly connects [Claude Desktop](https://claude.ai/download) to [WeaveMCP](https://weavemcp.com) virtual servers, enabling you to use multiple MCP (Model Context Protocol) servers through a single, unified interface.
 
 ## What is Weave?
 
-Weave acts as a bridge between Claude Desktop and SuperMCP's infrastructure, allowing you to:
+Weave acts as a bridge between Claude Desktop and WeaveMCP's infrastructure, allowing you to:
 
-- **Centrally manage** multiple MCP servers through SuperMCP's web interface
+- **Centrally manage** multiple MCP servers through WeaveMCP's web interface
 - **Automatically configure** Claude Desktop with your virtual MCP servers  
 - **Proxy MCP requests** from Claude Desktop to your configured servers with proper authentication
-- **Upgrade existing** MCP configurations to use SuperMCP's infrastructure
+- **Upgrade existing** MCP configurations to use WeaveMCP's infrastructure
 
 ## Quick Start
 
@@ -50,7 +50,7 @@ weave
 The below commands will work with either command, but we recommend using `uvx install` for ease of use, and the below commands assume installation via `uvx install`.
 
 ```bash
-# Login to SuperMCP
+# Login to WeaveMCP
 weave login
 
 # Configure Claude Desktop
@@ -65,7 +65,7 @@ weave status
 ### Authentication
 
 ```bash
-# Login to SuperMCP (opens browser for OAuth)
+# Login to WeaveMCP (opens browser for OAuth)
 weave login
 
 # Login with manual token entry
@@ -78,7 +78,7 @@ weave login --server-url https://your-server.com
 ### Setup & Configuration
 
 ```bash
-# Set up Claude Desktop with your default SuperMCP server
+# Set up Claude Desktop with your default WeaveMCP server
 weave setup
 
 # Preview setup changes without applying them
@@ -107,10 +107,10 @@ weave upgrade
 # Preview upgrade changes
 weave upgrade --dry-run
 
-# Remove SuperMCP servers from Claude Desktop
+# Remove WeaveMCP servers from Claude Desktop
 weave remove --organization myorg
 
-# Remove all SuperMCP servers
+# Remove all WeaveMCP servers
 weave remove --all
 ```
 
@@ -132,17 +132,17 @@ weave server remove staging
 
 ## How It Works
 
-1. **Login**: Authenticate with SuperMCP using OAuth through your browser
+1. **Login**: Authenticate with WeaveMCP using OAuth through your browser
 2. **Setup**: Weave configures Claude Desktop to use the `weave proxy` command
 3. **Proxy**: When Claude Desktop starts, it runs `weave proxy` which:
-   - Fetches your virtual server configuration from SuperMCP
+   - Fetches your virtual server configuration from WeaveMCP
    - Establishes authenticated connections to your MCP servers
    - Proxies all MCP requests between Claude and your servers
 
 ### Architecture
 
 ```
-Claude Desktop ↔ Weave Proxy (STDIO) ↔ SuperMCP Infrastructure ↔ Your MCP Servers
+Claude Desktop ↔ Weave Proxy (STDIO) ↔ WeaveMCP Infrastructure ↔ Your MCP Servers
 ```
 
 ## Configuration Files
@@ -178,7 +178,7 @@ weave login
 ```
 
 **"No default virtual server found"**  
-1. Visit [SuperMCP Dashboard](https://weavemcp.com)
+1. Visit [WeaveMCP Dashboard](https://weavemcp.com)
 2. Create a virtual server
 3. Run `uvx weave setup`
 
