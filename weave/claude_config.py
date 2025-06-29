@@ -178,9 +178,9 @@ class ClaudeConfigManager:
             True if server was updated
         """
         server_name = connection_details["name"]
-        
+
         config = self._read_config()
-        
+
         # Update server configuration for Claude Desktop
         # WeaveMCP servers now use the weave proxy command
         config["mcpServers"][server_name] = {

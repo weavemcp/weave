@@ -18,7 +18,7 @@ from .utils import (
     prompt_for_api_token,
     validate_base_url,
     format_server_info,
-    get_auth_instructions,  
+    get_auth_instructions,
     validate_api_token,
 )
 
@@ -335,8 +335,8 @@ def status(config_path: Optional[str]):
 @main.command()
 @click.option(
     "--server-url",
-    default="https://weavemcp.dev",
-    help="WeaveMCP server URL (default: https://weavemcp.dev)",
+    default="https://weavemcp.com",
+    help="WeaveMCP server URL (default: https://weavemcp.com)",
 )
 @click.option(
     "--token", help="API token for authentication (if not provided, will prompt)"
@@ -439,25 +439,27 @@ def remove(organization: Optional[str], config_path: Optional[str], remove_all: 
 )
 def upgrade(config_path: Optional[str], dry_run: bool):
     """Upgrade existing WeaveMCP servers to use the new built-in proxy"""
-    
+
     try:
         config_manager = ClaudeConfigManager(config_path)
         config = config_manager._read_config()
         weavemcp_servers = config_manager.list_weavemcp_servers()
-        
+
         if not weavemcp_servers:
             click.echo("No WeaveMCP servers found in configuration")
             return
-        
+
         updated_count = 0
         for server_name in weavemcp_servers:
             server_config = config["mcpServers"].get(server_name, {})
-            
+
             # Check if this server is using old methods (npx or weavemcp-setup)
-            if ((server_config.get("command") == "npx" and 
-                "@modelcontextprotocol/server-proxy" in server_config.get("args", [])) or
-                server_config.get("command") == "weavemcp-setup"):
-                
+            if (
+                server_config.get("command") == "npx"
+                and "@modelcontextprotocol/server-proxy"
+                in server_config.get("args", [])
+            ) or server_config.get("command") == "weavemcp-setup":
+
                 updated_count += 1
                 if dry_run:
                     click.echo(f"Would update {server_name} to use weave proxy")
@@ -467,24 +469,30 @@ def upgrade(config_path: Optional[str], dry_run: bool):
                         "command": "weave",
                         "args": ["proxy"],
                     }
-        
+
         if dry_run:
-            click.echo(f"\n🔍 DRY RUN - Found {updated_count} servers that would be updated")
+            click.echo(
+                f"\n🔍 DRY RUN - Found {updated_count} servers that would be updated"
+            )
             return
-        
+
         if updated_count > 0:
             # Create backup
             backup_path = config_manager.backup_config()
             if backup_path:
                 click.echo(f"📋 Created backup: {backup_path}")
-            
+
             # Write updated config
             config_manager._write_config(config)
-            click.echo(f"✅ Updated {updated_count} WeaveMCP servers to use built-in proxy")
+            click.echo(
+                f"✅ Updated {updated_count} WeaveMCP servers to use built-in proxy"
+            )
             click.echo("Restart Claude Desktop to use the updated configuration.")
         else:
-            click.echo("All WeaveMCP servers are already using the latest configuration")
-    
+            click.echo(
+                "All WeaveMCP servers are already using the latest configuration"
+            )
+
     except ClaudeConfigError as e:
         click.echo(f"❌ Config error: {e}", err=True)
         sys.exit(1)
@@ -596,61 +604,65 @@ def server_add(alias: str, url: str):
     "--token", help="API token for authentication (uses saved token if not provided)"
 )
 @click.option("--server", help="Server alias to use (e.g., 'default', 'staging')")
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging to stderr")
 @click.option(
-    "--verbose", "-v", is_flag=True, help="Enable verbose logging to stderr"
-)
-@click.option(
-    "--log-file", 
-    help="Override default log file path (default: ~/.weavemcp/proxy.log)"
+    "--log-file", help="Override default log file path (default: ~/.weavemcp/proxy.log)"
 )
 def proxy(
     server_url: Optional[str],
-    token: Optional[str], 
+    token: Optional[str],
     server: Optional[str],
     verbose: bool,
-    log_file: Optional[str]
+    log_file: Optional[str],
 ):
     """Start STDIO proxy server for WeaveMCP virtual servers"""
-    
+
     def ensure_authenticated():
         """Ensure user is authenticated, trigger login if needed"""
         try:
             config = WeaveMCPConfig()
             current_server = config.get_current_server()
-            
+
             if not current_server["token"]:
-                click.echo("❌ No authentication found. Starting login flow...")
+                click.echo(
+                    "❌ No authentication found. Starting login flow...", err=True
+                )
                 # Use the login command implementation
                 ctx = click.get_current_context()
-                ctx.invoke(login, server_url=current_server["url"], alias=current_server["alias"])
-                
+                ctx.invoke(
+                    login,
+                    server_url=current_server["url"],
+                    alias=current_server["alias"],
+                )
+
         except ConfigError:
-            click.echo("❌ No server configuration found. Starting login flow...")
+            click.echo(
+                "❌ No server configuration found. Starting login flow...", err=True
+            )
             ctx = click.get_current_context()
             ctx.invoke(login)
-    
+
     try:
         # Check authentication before starting proxy
         if not token and not server:
             ensure_authenticated()
-        
+
         if verbose:
-            click.echo("🚀 Starting Weave STDIO proxy server...")
+            click.echo("🚀 Starting Weave STDIO proxy server...", err=True)
             if server_url:
-                click.echo(f"   Server URL: {server_url}")
+                click.echo(f"   Server URL: {server_url}", err=True)
             if server:
-                click.echo(f"   Server alias: {server}")
+                click.echo(f"   Server alias: {server}", err=True)
             if log_file:
-                click.echo(f"   Log file: {log_file}")
-        
+                click.echo(f"   Log file: {log_file}", err=True)
+
         # Run the async proxy server
-        asyncio.run(run_proxy_server(
-            server_url=server_url,
-            token=token,
-            server_alias=server,
-            verbose=verbose
-        ))
-        
+        asyncio.run(
+            run_proxy_server(
+                server_url=server_url, token=token, server_alias=server, verbose=verbose
+            )
+        )
+
     except MCPProxyError as e:
         click.echo(f"❌ Proxy error: {e}", err=True)
         sys.exit(1)

@@ -25,6 +25,15 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.10.0",
+    "responses>=0.23.0",
+    "httpx>=0.24.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/weavemcp/weavemcp"
 Repository = "https://github.com/weavemcp/weavemcp"
@@ -35,3 +44,14 @@ weave = "weave.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["weave"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --tb=short"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: marks tests as integration tests (may require network)",
+    "unit: marks tests as unit tests (isolated, no network)",
+    "slow: marks tests as slow running",
+]

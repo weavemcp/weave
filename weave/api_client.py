@@ -16,7 +16,7 @@ class WeaveMCPClient:
     """Client for communicating with WeaveMCP API"""
 
     def __init__(
-        self, base_url: str = "https://weavemcp.dev", api_token: Optional[str] = None
+        self, base_url: str = "https://weavemcp.com", api_token: Optional[str] = None
     ):
         """
         Initialize the WeaveMCP API client

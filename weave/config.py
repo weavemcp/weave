@@ -34,7 +34,10 @@ class WeaveMCPConfig:
         """Read the configuration file"""
         if not self.config_path.exists():
             return {
-                "servers": {"default": {"url": "https://weavemcp.com", "token": None}},
+                "servers": {
+                    "default": {"url": "https://weavemcp.com", "token": None},
+                    "local": {"url": "http://127.0.0.1:8000", "token": None},
+                },
                 "current_server": "default",
             }
 
@@ -48,10 +51,15 @@ class WeaveMCPConfig:
             if "current_server" not in config:
                 config["current_server"] = "default"
 
-            # Ensure default server exists
+            # Ensure default servers exist
             if "default" not in config["servers"]:
                 config["servers"]["default"] = {
                     "url": "https://weavemcp.com",
+                    "token": None,
+                }
+            if "local" not in config["servers"]:
+                config["servers"]["local"] = {
+                    "url": "http://127.0.0.1:8000",
                     "token": None,
                 }
 
@@ -243,7 +251,7 @@ class WeaveMCPConfig:
             else:
                 current_server = self.get_current_server()
                 token = current_server["token"]
-            
+
             return bool(token)
         except ConfigError:
             return False
