@@ -142,3 +142,97 @@ class WeaveMCPClient:
 
         except WeaveMCPAPIError:
             return None
+
+    def mcp_tools_list(self, server_id: Optional[str] = None) -> Dict:
+        """
+        Get list of available MCP tools from the virtual server using JSON-RPC MCP protocol
+
+        Args:
+            server_id: Optional specific server ID, uses default if not provided
+
+        Returns:
+            Dict containing the tools/list response
+        """
+        if not server_id:
+            # Get default server
+            server_data = self.get_default_virtual_server()
+            server = server_data.get("server")
+            if not server:
+                raise WeaveMCPAPIError("No default virtual server found")
+            server_id = server["id"]
+
+        # Use the proxy endpoint for MCP JSON-RPC requests
+        url = urljoin(self.base_url, f"/proxy/{server_id}/")
+
+        # Create JSON-RPC request for tools/list
+        jsonrpc_request = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list",
+            "params": {},
+        }
+
+        try:
+            response = self.session.post(url, json=jsonrpc_request)
+            response.raise_for_status()
+
+            result = response.json()
+
+            # Check for JSON-RPC error
+            if "error" in result:
+                raise WeaveMCPAPIError(f"MCP error: {result['error']}")
+
+            return result
+        except requests.exceptions.RequestException as e:
+            raise WeaveMCPAPIError(f"HTTP request failed: {e}")
+        except json.JSONDecodeError as e:
+            raise WeaveMCPAPIError(f"Invalid JSON response: {e}")
+
+    def mcp_tools_call(
+        self, tool_name: str, arguments: Dict, server_id: Optional[str] = None
+    ) -> Dict:
+        """
+        Call an MCP tool on the virtual server using JSON-RPC MCP protocol
+
+        Args:
+            tool_name: Name of the tool to call
+            arguments: Arguments to pass to the tool
+            server_id: Optional specific server ID, uses default if not provided
+
+        Returns:
+            Dict containing the tools/call response
+        """
+        if not server_id:
+            # Get default server
+            server_data = self.get_default_virtual_server()
+            server = server_data.get("server")
+            if not server:
+                raise WeaveMCPAPIError("No default virtual server found")
+            server_id = server["id"]
+
+        # Use the proxy endpoint for MCP JSON-RPC requests
+        url = urljoin(self.base_url, f"/proxy/{server_id}/")
+
+        # Create JSON-RPC request for tools/call
+        jsonrpc_request = {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {"name": tool_name, "arguments": arguments},
+        }
+
+        try:
+            response = self.session.post(url, json=jsonrpc_request)
+            response.raise_for_status()
+
+            result = response.json()
+
+            # Check for JSON-RPC error
+            if "error" in result:
+                raise WeaveMCPAPIError(f"MCP error: {result['error']}")
+
+            return result
+        except requests.exceptions.RequestException as e:
+            raise WeaveMCPAPIError(f"HTTP request failed: {e}")
+        except json.JSONDecodeError as e:
+            raise WeaveMCPAPIError(f"Invalid JSON response: {e}")

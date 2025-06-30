@@ -130,6 +130,32 @@ weave server add production https://prod.weavemcp.com
 weave server remove staging
 ```
 
+### API Commands
+
+Use MCP tools directly from the command line using proper JSON-RPC MCP protocol:
+
+```bash
+# List available tools
+weave api tools-list
+
+# List tools with detailed output (shows full JSON-RPC response)
+weave api tools-list --json
+
+# Call a tool without arguments
+weave api tools-call tool_name
+
+# Call a tool with arguments
+weave api tools-call read_file --args '{"path": "/path/to/file.txt"}'
+
+# Use specific server
+weave api tools-list --server staging
+
+# Use raw JSON-RPC output
+weave api tools-call list_files --args '{"directory": "/tmp"}' --json
+```
+
+The API commands use the standard MCP JSON-RPC protocol (`tools/list` and `tools/call` methods) to communicate directly with your virtual servers.
+
 ## How It Works
 
 1. **Login**: Authenticate with WeaveMCP using OAuth through your browser

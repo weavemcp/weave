@@ -1,6 +1,7 @@
 """CLI interface for Weave setup agent"""
 
 import click
+import json
 import sys
 import webbrowser
 import time
@@ -669,6 +670,179 @@ def proxy(
     except KeyboardInterrupt:
         if verbose:
             click.echo("\n⏹️  Proxy server stopped", err=True)
+    except Exception as e:
+        click.echo(f"❌ Unexpected error: {e}", err=True)
+        sys.exit(1)
+
+
+@main.group()
+def api():
+    """Make MCP API calls to your virtual server"""
+    pass
+
+
+@api.command("tools-list")
+@click.option(
+    "--server-url", help="WeaveMCP server URL (uses saved config if not provided)"
+)
+@click.option(
+    "--token", help="API token for authentication (uses saved token if not provided)"
+)
+@click.option("--server", help="Server alias to use (e.g., 'default', 'staging')")
+@click.option("--server-id", help="Specific virtual server ID to use")
+@click.option("--json", "output_json", is_flag=True, help="Output raw JSON response")
+def api_tools_list(
+    server_url: Optional[str],
+    token: Optional[str],
+    server: Optional[str],
+    server_id: Optional[str],
+    output_json: bool,
+):
+    """List available MCP tools from your virtual server"""
+
+    try:
+        # Get authentication configuration
+        try:
+            server_url, token = _get_auth_config(server_url, token, server)
+        except click.ClickException as e:
+            click.echo(f"❌ {e.message}", err=True)
+            click.echo("💡 Use 'weave login' to authenticate first")
+            sys.exit(1)
+
+        # Initialize API client
+        client = WeaveMCPClient(server_url, token)
+
+        # Call tools/list
+        result = client.mcp_tools_list(server_id)
+
+        if output_json:
+            click.echo(json.dumps(result, indent=2))
+        else:
+            # Handle JSON-RPC response format
+            if "result" in result and "tools" in result["result"]:
+                tools = result["result"]["tools"]
+                if not tools:
+                    click.echo("No tools available")
+                    return
+
+                click.echo(f"Available tools ({len(tools)}):")
+                click.echo()
+
+                for tool in tools:
+                    click.echo(f"🔧 {tool['name']}")
+                    if tool.get("description"):
+                        click.echo(f"   {tool['description']}")
+
+                    if tool.get("inputSchema", {}).get("properties"):
+                        click.echo("   Parameters:")
+                        for param_name, param_info in tool["inputSchema"][
+                            "properties"
+                        ].items():
+                            required = param_name in tool["inputSchema"].get(
+                                "required", []
+                            )
+                            req_marker = " (required)" if required else ""
+                            param_type = param_info.get("type", "unknown")
+                            click.echo(
+                                f"     • {param_name} ({param_type}){req_marker}"
+                            )
+                            if param_info.get("description"):
+                                click.echo(f"       {param_info['description']}")
+                    click.echo()
+            elif "error" in result:
+                click.echo(f"❌ MCP Error: {result['error']}", err=True)
+                sys.exit(1)
+            else:
+                click.echo("❌ Unexpected response format")
+                click.echo(json.dumps(result, indent=2))
+
+    except WeaveMCPAPIError as e:
+        click.echo(f"❌ API error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"❌ Unexpected error: {e}", err=True)
+        sys.exit(1)
+
+
+@api.command("tools-call")
+@click.argument("tool_name")
+@click.option(
+    "--args", help='Tool arguments as JSON string (e.g., \'{"path": "/tmp"}\')'
+)
+@click.option(
+    "--server-url", help="WeaveMCP server URL (uses saved config if not provided)"
+)
+@click.option(
+    "--token", help="API token for authentication (uses saved token if not provided)"
+)
+@click.option("--server", help="Server alias to use (e.g., 'default', 'staging')")
+@click.option("--server-id", help="Specific virtual server ID to use")
+@click.option("--json", "output_json", is_flag=True, help="Output raw JSON response")
+def api_tools_call(
+    tool_name: str,
+    args: Optional[str],
+    server_url: Optional[str],
+    token: Optional[str],
+    server: Optional[str],
+    server_id: Optional[str],
+    output_json: bool,
+):
+    """Call an MCP tool on your virtual server"""
+
+    try:
+        # Parse arguments
+        tool_args = {}
+        if args:
+            try:
+                tool_args = json.loads(args)
+            except json.JSONDecodeError as e:
+                click.echo(f"❌ Invalid JSON in --args: {e}", err=True)
+                sys.exit(1)
+
+        # Get authentication configuration
+        try:
+            server_url, token = _get_auth_config(server_url, token, server)
+        except click.ClickException as e:
+            click.echo(f"❌ {e.message}", err=True)
+            click.echo("💡 Use 'weave login' to authenticate first")
+            sys.exit(1)
+
+        # Initialize API client
+        client = WeaveMCPClient(server_url, token)
+
+        # Call the tool
+        result = client.mcp_tools_call(tool_name, tool_args, server_id)
+
+        if output_json:
+            click.echo(json.dumps(result, indent=2))
+        else:
+            # Handle JSON-RPC response format
+            if "result" in result and "content" in result["result"]:
+                content = result["result"]["content"]
+                if isinstance(content, list):
+                    for item in content:
+                        if item.get("type") == "text":
+                            click.echo(item.get("text", ""))
+                        else:
+                            click.echo(f"Content type: {item.get('type')}")
+                            click.echo(json.dumps(item, indent=2))
+                else:
+                    click.echo(content)
+            elif "error" in result:
+                click.echo(f"❌ MCP Error: {result['error']}", err=True)
+                sys.exit(1)
+            elif "result" in result:
+                # Tool executed successfully but no content field
+                click.echo("✅ Tool executed successfully")
+                if result["result"]:
+                    click.echo(json.dumps(result["result"], indent=2))
+            else:
+                click.echo("❌ Unexpected response format")
+                click.echo(json.dumps(result, indent=2))
+
+    except WeaveMCPAPIError as e:
+        click.echo(f"❌ API error: {e}", err=True)
+        sys.exit(1)
     except Exception as e:
         click.echo(f"❌ Unexpected error: {e}", err=True)
         sys.exit(1)
