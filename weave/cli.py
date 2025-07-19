@@ -26,16 +26,29 @@ from .utils import (
 
 @click.group()
 @click.version_option(version="0.1.0")
-def main():
+@click.option(
+    "--context",
+    help="Context alias to use (overrides current_server in config)",
+    envvar="WEAVE_CONTEXT",
+)
+@click.pass_context
+def main(ctx, context):
     """Weave - Configure Claude Desktop with your WeaveMCP servers"""
-    pass
+    # Initialize shared config with context override
+    ctx.ensure_object(dict)
+    try:
+        config = WeaveMCPConfig(context_override=context)
+        ctx.obj["config"] = config
+    except Exception:
+        # If config initialization fails, store context for later initialization
+        ctx.obj["config"] = None
+        ctx.obj["context_override"] = context
 
 
 @main.command()
 @click.option(
     "--server-url",
-    default="https://weavemcp.com",
-    help="WeaveMCP server URL (default: https://weavemcp.com)",
+    help="WeaveMCP server URL (optional, defaults to server from context or https://weavemcp.com)",
 )
 @click.option(
     "--alias", default="default", help="Server alias to save as (default: default)"
@@ -45,12 +58,22 @@ def main():
     is_flag=True,
     help="Don't open browser automatically (manual token entry)",
 )
-def login(server_url: str, alias: str, no_browser: bool):
+@click.pass_context
+def login(ctx, server_url: Optional[str], alias: str, no_browser: bool):
     """Log in to WeaveMCP and save authentication token"""
 
     try:
-        # Initialize config manager
-        config = WeaveMCPConfig()
+        # Get config from context
+        config = _get_config_from_context(ctx)
+
+        # Determine server URL: provided -> context -> default
+        if not server_url:
+            try:
+                effective_server = config.get_effective_server()
+                server_url = effective_server["url"]
+            except ConfigError:
+                # Fallback to default if no context/config available
+                server_url = "https://weavemcp.com"
 
         # Validate and normalize server URL
         server_url = validate_base_url(server_url)
@@ -150,59 +173,38 @@ def login(server_url: str, alias: str, no_browser: bool):
         sys.exit(1)
 
 
+def _get_config_from_context(ctx: click.Context) -> WeaveMCPConfig:
+    """Get or create config instance from click context"""
+    if ctx.obj and ctx.obj.get("config"):
+        return ctx.obj["config"]
+
+    # Fallback: create new config with context override if available
+    context_override = ctx.obj.get("context_override") if ctx.obj else None
+    config = WeaveMCPConfig(context_override=context_override)
+
+    # Store in context for reuse
+    if ctx.obj:
+        ctx.obj["config"] = config
+
+    return config
+
+
 def _get_auth_config(
     server_url: Optional[str] = None,
     token: Optional[str] = None,
     server_alias: Optional[str] = None,
-):
+    ctx: Optional[click.Context] = None,
+) -> tuple[str, str]:
     """Get authentication configuration, preferring saved config"""
-    config = WeaveMCPConfig()
+    config = _get_config_from_context(ctx) if ctx else WeaveMCPConfig()
 
-    if server_alias:
-        # Use specific server alias
-        servers = config.list_servers()
-        alias_server = next((s for s in servers if s["alias"] == server_alias), None)
-        if not alias_server:
-            raise click.ClickException(
-                f"Server alias '{server_alias}' not found. Use 'login' command first."
-            )
-        return alias_server["url"], config.get_token(server_alias)
-
-    if server_url and token:
-        # Both provided explicitly
-        return validate_base_url(server_url), token
-
-    if token:
-        # Token provided, use current server URL or default
-        current_server = config.get_current_server()
-        return current_server["url"], token
-
-    if server_url:
-        # Server URL provided, try to get saved token
-        server_url = validate_base_url(server_url)
-        servers = config.list_servers()
-        matching_server = next((s for s in servers if s["url"] == server_url), None)
-        if matching_server and matching_server.get("has_token"):
-            return server_url, config.get_token(matching_server["alias"])
-        else:
-            raise click.ClickException(
-                f"No saved token for {server_url}. Use 'login' command first."
-            )
-
-    # Nothing provided, use current server
-    current_server = config.get_current_server()
-    if not current_server["token"]:
-        raise click.ClickException(
-            "No authentication configured. Use 'login' command first."
-        )
-
-    return current_server["url"], current_server["token"]
+    try:
+        return config.get_auth_config(server_url, token, server_alias)
+    except ConfigError as e:
+        raise click.ClickException(str(e))
 
 
 @main.command()
-@click.option(
-    "--server-url", help="WeaveMCP server URL (uses saved config if not provided)"
-)
 @click.option(
     "--token", help="API token for authentication (uses saved token if not provided)"
 )
@@ -214,8 +216,9 @@ def _get_auth_config(
 @click.option(
     "--dry-run", is_flag=True, help="Show what would be done without making changes"
 )
+@click.pass_context
 def setup(
-    server_url: Optional[str],
+    ctx,
     token: Optional[str],
     server: Optional[str],
     config_path: Optional[str],
@@ -226,7 +229,7 @@ def setup(
     try:
         # Get authentication configuration
         try:
-            server_url, token = _get_auth_config(server_url, token, server)
+            server_url, token = _get_auth_config(None, token, server, ctx)
         except click.ClickException as e:
             click.echo(f"❌ {e.message}", err=True)
             click.echo("💡 Use 'weave login' to authenticate first")
@@ -336,22 +339,44 @@ def status(config_path: Optional[str]):
 @main.command()
 @click.option(
     "--server-url",
-    default="https://weavemcp.com",
-    help="WeaveMCP server URL (default: https://weavemcp.com)",
+    help="WeaveMCP server URL (optional, uses current server from context if not provided)",
 )
 @click.option(
     "--token", help="API token for authentication (if not provided, will prompt)"
 )
-def test(server_url: str, token: Optional[str]):
+@click.pass_context
+def test(ctx, server_url: Optional[str], token: Optional[str]):
     """Test connection to WeaveMCP API"""
 
     try:
+        # Get config from context
+        config = _get_config_from_context(ctx)
+
+        # Determine server URL and token using context if not provided
+        if not server_url and not token:
+            try:
+                server_url, token = config.get_auth_config()
+            except ConfigError:
+                # Fallback to prompting if no saved config
+                server_url = "https://weavemcp.com"
+                token = prompt_for_api_token()
+        elif not server_url:
+            # Use context server with provided token
+            try:
+                effective_server = config.get_effective_server()
+                server_url = effective_server["url"]
+            except ConfigError:
+                server_url = "https://weavemcp.com"
+        elif not token:
+            # Use provided server URL with context or prompt for token
+            try:
+                _, token = config.get_auth_config(server_url=server_url)
+            except ConfigError:
+                token = prompt_for_api_token()
+
         server_url = validate_base_url(server_url)
 
-        if not token:
-            token = prompt_for_api_token()
-
-        if not validate_api_token(token):
+        if not token or not validate_api_token(token):
             click.echo("❌ Invalid token format", err=True)
             sys.exit(1)
 
@@ -506,10 +531,11 @@ def server():
 
 
 @server.command("list")
-def server_list():
+@click.pass_context
+def server_list(ctx):
     """List configured WeaveMCP servers"""
     try:
-        config = WeaveMCPConfig()
+        config = _get_config_from_context(ctx)
         servers = config.list_servers()
 
         if not servers:
@@ -535,10 +561,11 @@ def server_list():
 
 @server.command("switch")
 @click.argument("alias")
-def server_switch(alias: str):
+@click.pass_context
+def server_switch(ctx, alias: str):
     """Switch to a different server configuration"""
     try:
-        config = WeaveMCPConfig()
+        config = _get_config_from_context(ctx)
         config.set_current_server(alias)
         click.echo(f"✅ Switched to server: {alias}")
 
@@ -550,10 +577,11 @@ def server_switch(alias: str):
 @server.command("remove")
 @click.argument("alias")
 @click.option("--force", is_flag=True, help="Skip confirmation prompt")
-def server_remove(alias: str, force: bool):
+@click.pass_context
+def server_remove(ctx, alias: str, force: bool):
     """Remove a server configuration"""
     try:
-        config = WeaveMCPConfig()
+        config = _get_config_from_context(ctx)
 
         if not force:
             servers = config.list_servers()
@@ -584,10 +612,11 @@ def server_remove(alias: str, force: bool):
 @server.command("add")
 @click.argument("alias")
 @click.argument("url")
-def server_add(alias: str, url: str):
+@click.pass_context
+def server_add(ctx, alias: str, url: str):
     """Add a new server configuration (without token)"""
     try:
-        config = WeaveMCPConfig()
+        config = _get_config_from_context(ctx)
         config.add_server(alias, url)
         click.echo(f"✅ Added server '{alias}' at {url}")
         click.echo(f"💡 Use 'weave login --alias {alias}' to authenticate")
@@ -599,9 +628,6 @@ def server_add(alias: str, url: str):
 
 @main.command()
 @click.option(
-    "--server-url", help="WeaveMCP server URL (uses saved config if not provided)"
-)
-@click.option(
     "--token", help="API token for authentication (uses saved token if not provided)"
 )
 @click.option("--server", help="Server alias to use (e.g., 'default', 'staging')")
@@ -609,8 +635,9 @@ def server_add(alias: str, url: str):
 @click.option(
     "--log-file", help="Override default log file path (default: ~/.weavemcp/proxy.log)"
 )
+@click.pass_context
 def proxy(
-    server_url: Optional[str],
+    ctx,
     token: Optional[str],
     server: Optional[str],
     verbose: bool,
@@ -621,7 +648,7 @@ def proxy(
     def ensure_authenticated():
         """Ensure user is authenticated, trigger login if needed"""
         try:
-            config = WeaveMCPConfig()
+            config = _get_config_from_context(ctx)
             current_server = config.get_current_server()
 
             if not current_server["token"]:
@@ -629,7 +656,6 @@ def proxy(
                     "❌ No authentication found. Starting login flow...", err=True
                 )
                 # Use the login command implementation
-                ctx = click.get_current_context()
                 ctx.invoke(
                     login,
                     server_url=current_server["url"],
@@ -640,7 +666,6 @@ def proxy(
             click.echo(
                 "❌ No server configuration found. Starting login flow...", err=True
             )
-            ctx = click.get_current_context()
             ctx.invoke(login)
 
     try:
@@ -650,8 +675,6 @@ def proxy(
 
         if verbose:
             click.echo("🚀 Starting Weave STDIO proxy server...", err=True)
-            if server_url:
-                click.echo(f"   Server URL: {server_url}", err=True)
             if server:
                 click.echo(f"   Server alias: {server}", err=True)
             if log_file:
@@ -660,7 +683,7 @@ def proxy(
         # Run the async proxy server
         asyncio.run(
             run_proxy_server(
-                server_url=server_url, token=token, server_alias=server, verbose=verbose
+                server_url=None, token=token, server_alias=server, verbose=verbose
             )
         )
 
@@ -683,16 +706,14 @@ def api():
 
 @api.command("tools-list")
 @click.option(
-    "--server-url", help="WeaveMCP server URL (uses saved config if not provided)"
-)
-@click.option(
     "--token", help="API token for authentication (uses saved token if not provided)"
 )
 @click.option("--server", help="Server alias to use (e.g., 'default', 'staging')")
 @click.option("--server-id", help="Specific virtual server ID to use")
 @click.option("--json", "output_json", is_flag=True, help="Output raw JSON response")
+@click.pass_context
 def api_tools_list(
-    server_url: Optional[str],
+    ctx,
     token: Optional[str],
     server: Optional[str],
     server_id: Optional[str],
@@ -703,7 +724,7 @@ def api_tools_list(
     try:
         # Get authentication configuration
         try:
-            server_url, token = _get_auth_config(server_url, token, server)
+            server_url, token = _get_auth_config(None, token, server, ctx)
         except click.ClickException as e:
             click.echo(f"❌ {e.message}", err=True)
             click.echo("💡 Use 'weave login' to authenticate first")
@@ -770,18 +791,16 @@ def api_tools_list(
     "--args", help='Tool arguments as JSON string (e.g., \'{"path": "/tmp"}\')'
 )
 @click.option(
-    "--server-url", help="WeaveMCP server URL (uses saved config if not provided)"
-)
-@click.option(
     "--token", help="API token for authentication (uses saved token if not provided)"
 )
 @click.option("--server", help="Server alias to use (e.g., 'default', 'staging')")
 @click.option("--server-id", help="Specific virtual server ID to use")
 @click.option("--json", "output_json", is_flag=True, help="Output raw JSON response")
+@click.pass_context
 def api_tools_call(
+    ctx,
     tool_name: str,
     args: Optional[str],
-    server_url: Optional[str],
     token: Optional[str],
     server: Optional[str],
     server_id: Optional[str],
@@ -801,7 +820,7 @@ def api_tools_call(
 
         # Get authentication configuration
         try:
-            server_url, token = _get_auth_config(server_url, token, server)
+            server_url, token = _get_auth_config(None, token, server, ctx)
         except click.ClickException as e:
             click.echo(f"❌ {e.message}", err=True)
             click.echo("💡 Use 'weave login' to authenticate first")

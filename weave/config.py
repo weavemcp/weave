@@ -15,12 +15,15 @@ class ConfigError(Exception):
 class WeaveMCPConfig:
     """Manager for WeaveMCP CLI configuration"""
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(
+        self, config_path: Optional[str] = None, context_override: Optional[str] = None
+    ):
         """
         Initialize config manager
 
         Args:
             config_path: Optional custom path to config file
+            context_override: Optional context alias to override current server
         """
         if config_path:
             self.config_path = Path(config_path)
@@ -29,6 +32,9 @@ class WeaveMCPConfig:
 
         # Ensure config directory exists
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Store context override for server resolution
+        self.context_override = context_override
 
     def _read_config(self) -> Dict:
         """Read the configuration file"""
@@ -264,3 +270,89 @@ class WeaveMCPConfig:
             Path to proxy log file
         """
         return self.config_path.parent / "proxy.log"
+
+    def get_effective_server(
+        self, server_alias: Optional[str] = None
+    ) -> Dict[str, str]:
+        """
+        Get the effective server configuration based on context override and parameters
+
+        Args:
+            server_alias: Optional server alias to use instead of current server
+
+        Returns:
+            Dict with 'alias', 'url', and 'token' keys
+        """
+        # Priority order: provided alias -> context override -> current server
+        effective_alias = server_alias or self.context_override
+
+        if effective_alias:
+            # Use specific server alias
+            servers = self.list_servers()
+            alias_server = next(
+                (s for s in servers if s["alias"] == effective_alias), None
+            )
+            if not alias_server:
+                raise ConfigError(
+                    f"Server alias '{effective_alias}' not found. Use 'login' command first."
+                )
+
+            return {
+                "alias": effective_alias,
+                "url": alias_server["url"],
+                "token": self.get_token(effective_alias),
+            }
+        else:
+            # Use current server
+            return self.get_current_server()
+
+    def get_auth_config(
+        self,
+        server_url: Optional[str] = None,
+        token: Optional[str] = None,
+        server_alias: Optional[str] = None,
+    ) -> tuple[str, str]:
+        """
+        Get authentication configuration for API calls
+
+        Args:
+            server_url: Optional server URL override
+            token: Optional token override
+            server_alias: Optional server alias override
+
+        Returns:
+            Tuple of (server_url, token)
+        """
+        # If both server_url and token are provided explicitly, use them
+        if server_url and token:
+            from .utils import validate_base_url
+
+            return validate_base_url(server_url), token
+
+        # If only token is provided, use it with current server URL
+        if token:
+            current_server = self.get_effective_server(server_alias)
+            return current_server["url"], token
+
+        # If only server_url is provided, try to get saved token
+        if server_url:
+            from .utils import validate_base_url
+
+            server_url = validate_base_url(server_url)
+            servers = self.list_servers()
+            matching_server = next((s for s in servers if s["url"] == server_url), None)
+            if matching_server and matching_server.get("has_token"):
+                return server_url, self.get_token(matching_server["alias"])
+            else:
+                raise ConfigError(
+                    f"No saved token for {server_url}. Use 'login' command first."
+                )
+
+        # Use effective server (with context override support)
+        effective_server = self.get_effective_server(server_alias)
+        if not effective_server["token"]:
+            raise ConfigError(
+                "No authentication configured. Use 'login' command first."
+            )
+
+        return effective_server["url"], effective_server["token"]
